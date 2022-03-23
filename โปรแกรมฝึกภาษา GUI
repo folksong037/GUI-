@@ -1,0 +1,242 @@
+from tkinter import *
+from tkinter import ttk, messagebox #theme of Tk
+import sqlite3
+import random
+
+############DATABASE###############
+
+conn = sqlite3.connect(r"C:\Users\NITRO\Desktop\final sql.db")
+c = conn.cursor()
+
+c.execute("""CREATE TABLE IF NOT EXISTS vocab (
+        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+		vocab text,
+		meaning text)""")
+
+def insert_vocab(vocab,meaning):
+    ID = None
+    with conn:
+        c.execute("""INSERT INTO vocab VALUES (?,?,?)""",
+                  (ID,vocab,meaning))
+    conn.commit()
+    print('Data was inserted')
+
+
+def view_vocab():
+    with conn:
+        c.execute("SELECT * FROM vocab")
+        allvocab = c.fetchall()
+        print(allvocab)
+
+    return allvocab
+
+
+############MAIN GUI###############
+
+
+GUI = Tk()
+GUI.geometry('600x550+600+200')
+GUI.title('โปรแกรมท่องจำคำศัพท์อัจฉริยะ - Uncle Vocab')
+
+cc=Canvas(GUI,bg="gray",height=200,width=200)
+filename=PhotoImage(file="C:\\Users\\NITRO\\Pictures\\New folder\\bacon.png")
+bg_label=Label(GUI,image=filename)
+bg_label.place(x=0,y=0,relwidth=1,relheight=1)
+
+FONT1 = ('Angsana New',25)
+FONT2 = ('Angsana New',30)
+FONT3 = ('Angsana New',10)
+
+#########NOTEBOOK###########
+Tab = ttk.Notebook(GUI)
+
+T1 = Frame(Tab)
+T2 = Frame(Tab)
+T3 = Frame(Tab)
+T4 = Frame(Tab)
+
+Tab.pack(fill=BOTH,expand=1)
+
+Tab.add(T1,text='Add Vocab')
+Tab.add(T2,text='All Vocab')
+Tab.add(T3,text='Flashcard')
+Tab.add(T4,text='Spell')
+
+
+# ***************TAB 1******************* #
+
+#########VOCAB###########
+L1 = ttk.Label(T1,text='คำศัพท์',font=FONT1,foreground='purple')
+L1.pack()
+
+v_vocab = StringVar()
+E1 = ttk.Entry(T1,textvariable=v_vocab,font=FONT1,foreground='green',width=30)
+E1.pack()
+
+
+#########MEANING###########
+L2 = ttk.Label(T1,text='คำแปล',font=FONT1,foreground='purple')
+L2.pack()
+
+v_meaning = StringVar()
+E2 = ttk.Entry(T1,textvariable=v_meaning,font=FONT1,foreground='green',width=30)
+E2.pack()
+
+#########BUTTON###########
+def SaveVocab(event=None):
+	global addvocab
+	vocab = v_vocab.get()
+	meaning = v_meaning.get()
+	if len(vocab) > 0 and len(meaning) > 0:
+		insert_vocab(vocab,meaning)
+		print('V: {} M: {}'.format(vocab,meaning))
+		v_vocab.set('')
+		v_meaning.set('')
+		E1.focus()
+		# clear old data
+		vocabtable.delete(*vocabtable.get_children())
+
+		# update table
+		addvocab = view_vocab()
+		for v in addvocab:
+			vocabtable.insert('','end',value=v)
+		print('----------')
+	else:
+		messagebox.showinfo('ไม่มีข้อมูล','ต้องมีช่องคำศัพท์และคำแปล หากไม่มีไม่สามารถบันทึกได้')
+
+
+B1 = ttk.Button(T1,text='Save Vocab',command=SaveVocab)
+B1.pack(ipadx=40,ipady=20,pady=20)
+
+E2.bind('<Return>',SaveVocab)
+
+
+# ***************TAB 2******************* #
+LL=[]
+header = ['ID','Vocab','Meaning']
+hdsize = [50,200,250]
+
+vocabtable = ttk.Treeview(T2,columns=header,show='headings',height=20)
+vocabtable.place(x=20,y=50)
+
+LLL = ttk.Label(T2,text='เลือก ID ที่ต้องการลบ',font=FONT3)
+LLL.pack()
+LLL.place(x=10,y=15)
+
+L111 = ttk.Entry(T2,font=FONT3,width=20)
+L111.pack()
+L111.place(x=130,y=15)
+
+for h,s in zip(header,hdsize):
+	vocabtable.heading(h,text=h)
+	vocabtable.column(h,width=s)
+
+def delete():
+	L111.get()
+	c.execute('DELETE FROM vocab WHERE id=? ',L111.get())
+	conn.commit()
+
+GGG = ttk.Button(T2,text='ลบ',command=delete)
+GGG.pack(ipadx=10,ipady=10,pady=10)
+GGG.place(x=300,y=20)
+
+
+# ***************TAB 3 ******************* #
+rv_vocab = StringVar()
+rv_vocab.set('---คำศัพท์---')
+rv_check = StringVar()
+rv_check.set('---เช็คคำตอบ---')
+
+R1 = ttk.Label(T3,textvariable=rv_vocab,font=FONT2,foreground='purple')
+R1.pack(pady=20)
+
+R11 = ttk.Label(T3,text='ใส่คำแปล',font=FONT2)
+R11.pack()
+
+L11 = ttk.Entry(T3,font=FONT2,width=30)
+L11.pack()
+
+R2 = ttk.Label(T3,textvariable=rv_check,font=FONT2,foreground='blue')
+R2.pack(pady=20)
+
+
+BRF = Frame(T3)
+BRF.pack()
+
+
+vcurrent = []
+
+def NextButton():
+	global vcurrent
+	current_1 = random.choice(addvocab) # (2, 'Cat', 'แมว', 0)
+	vcurrent = current_1
+	rv_vocab.set(current_1[1])
+	rv_check.set('---คำแปล---')
+	
+
+def CheckButton():
+	kk = L11.get() # kk รับค่าจาก L11 ที่เรารับเข้ามา
+	if kk == vcurrent[2]:
+		rv_check.set("ถูกต้อง")
+	else:
+		rv_check.set("ผิด")
+
+BR1 = ttk.Button(BRF,text='Next',command=NextButton)
+BR1.grid(row=0,column=0,ipadx=40,ipady=20,padx=10)
+BR2 = ttk.Button(BRF,text='Check',command=CheckButton)
+BR2.grid(row=0,column=1,ipadx=40,ipady=20,padx=10)
+
+
+# ************** TAB 4 ****************** #
+spell_vocab = StringVar()
+spell_vocab.set('---คำศัพท์---')
+spell_check = StringVar()
+spell_check.set('---เช็คคำตอบ---')
+
+sp = ttk.Label(T4,textvariable=rv_vocab,font=FONT2,foreground='green')
+sp.pack(pady=20)
+
+sp1 = ttk.Label(T4,text='สะกดคำภาษาอังกฤษ',font=FONT2)
+sp1.pack()
+
+sp_1 = ttk.Entry(T4,font=FONT2,width=30)
+sp_1.pack()
+
+sp_11 = ttk.Label(T4,textvariable=spell_check,font=FONT2)
+sp_11.pack(pady=20)
+
+BRF_2 = Frame(T4)
+BRF_2.pack()
+
+vspell = []
+
+def NextButton_2():
+	global vspell
+	current_2 = random.choice(addvocab) # (2, 'Cat', 'แมว', 0)
+	vspell = current_2
+	rv_vocab.set(current_2[2])
+	spell_check.set('---เช็คคำตอบ---')
+
+def CheckButton_2():
+	spell_1 = sp_1.get() # kk รับค่าจาก L11 ที่เรารับเข้ามา
+	if spell_1 == vspell[1]:
+		spell_check.set("ถูกต้อง")
+	else:
+		spell_check.set("ผิด")
+
+BR_2 = ttk.Button(BRF_2,text='Next',command=NextButton_2)
+BR_2.grid(row=0,column=0,ipadx=40,ipady=20,padx=10)
+BR__2 = ttk.Button(BRF_2,text='Check',command=CheckButton_2)
+BR__2.grid(row=0,column=1,ipadx=40,ipady=20,padx=10)
+
+
+
+# **************Initial Program******************* #
+global addvocab
+addvocab = view_vocab()
+
+if len(addvocab) > 0:
+	for v in addvocab:
+		vocabtable.insert('','end',value=v)
+
+GUI.mainloop()
